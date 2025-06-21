@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js'; // Assuming you're using ES modules
+import User from '../models/Court.js'; // Assuming you're using ES modules
 
 // JWT protection middleware
 export const protect = async (req, res, next) => {

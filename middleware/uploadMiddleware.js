@@ -1,16 +1,21 @@
 // middleware/uploadMiddleware.js
 import multer from "multer";
 import path from "path";
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+
+import cloudinary from '../utils/cloudinary.js'; // Ensure this path is correct
 
 // Temp folder to store before uploading to Cloudinary
-const storage = multer.diskStorage({
-  destination(req, file, cb) {
-    cb(null, "uploads/"); // make sure 'uploads/' folder exists
-  },
-  filename(req, file, cb) {
-    cb(null, `${Date.now()}-${file.originalname}`);
+
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'EZCO', // optional: cloud folder name
+    allowed_formats: ['jpg', 'png', 'jpeg'], // optional
+    transformation: [{ width: 800, height: 600, crop: "limit" }], // optional
   },
 });
+
 
 // File type validation
 const fileFilter = (req, file, cb) => {

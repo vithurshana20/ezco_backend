@@ -1,13 +1,38 @@
 import Court from "../models/Court.js";
 
-// ✅ Add a court (Court Owner only)
+// 🔁 Helper: Generate time slots for next N days (default 30)
+const generateSlotsForDate = () => {
+  const slots = [];
+  for (let hour = 9; hour < 22; hour++) {
+    slots.push({
+      start: `${hour}:00`,
+      end: `${hour + 1}:00`,
+      status: "available"
+    });
+  }
+  return slots;
+};
+
+const generateAvailableTimes = (days = 30) => {
+  const map = {};
+  const today = new Date();
+  for (let i = 0; i < days; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    const dateString = date.toISOString().split("T")[0];
+    map[dateString] = generateSlotsForDate();
+  }
+  return map;
+};
+
+//  Add a court (Court Owner only)
 export const addCourt = async (req, res) => {
-  const { name, location, pricePerHour, contact, availableTimes } = req.body;
+  const { name, location, pricePerHour, contact } = req.body;
 
   try {
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
 
-    const images = req.files?.map((file) => file.path);
+    const images = req.files.map((file) => file.path); // Cloudinary URLs
 
     if (!name || !location || !pricePerHour || !contact?.phone || !contact?.mapLink || !images || images.length === 0) {
       return res.status(400).json({
@@ -26,7 +51,7 @@ export const addCourt = async (req, res) => {
         phone: contact.phone,
         mapLink: contact.mapLink,
       },
-      availableTimes: availableTimes ? JSON.parse(availableTimes) : {},
+      availableTimes: generateAvailableTimes(), // ⏱️ Pre-fill 30 days 9AM-10PM
       isApproved: false,
     });
 
@@ -37,7 +62,7 @@ export const addCourt = async (req, res) => {
   }
 };
 
-// ✅ Get all approved courts (Player & Admin view)
+//  Get all approved courts (Player & Admin view)
 export const getAllCourts = async (req, res) => {
   try {
     const courts = await Court.find({ isApproved: true });
@@ -47,7 +72,7 @@ export const getAllCourts = async (req, res) => {
   }
 };
 
-// ✅ Get courts owned by the logged-in court owner
+//  Get courts owned by the logged-in court owner
 export const getMyCourts = async (req, res) => {
   try {
     const courts = await Court.find({ owner: req.user._id });
@@ -57,7 +82,7 @@ export const getMyCourts = async (req, res) => {
   }
 };
 
-// ✅ Add available time slot (date-based)
+// Add available time slot (date-based)
 export const addAvailableTime = async (req, res) => {
   const { courtId, date, start, end } = req.body;
 
@@ -67,20 +92,20 @@ export const addAvailableTime = async (req, res) => {
 
     const newSlot = { start, end, status: "available" };
 
-    if (!court.availableTimes.has(date)) {
-      court.availableTimes.set(date, [newSlot]);
-    } else {
-      court.availableTimes.get(date).push(newSlot);
-    }
+    const currentSlots = court.availableTimes.get(date) || [];
+    currentSlots.push(newSlot);
+    court.availableTimes.set(date, currentSlots);
 
+    court.markModified("availableTimes");
     await court.save();
+
     res.status(200).json({ message: "Available time added", court });
   } catch (error) {
     res.status(500).json({ message: "Failed to add time", error: error.message });
   }
 };
 
-// ✅ Upload court image
+//  Upload court image
 export const uploadCourtImage = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "No image uploaded" });
@@ -92,7 +117,7 @@ export const uploadCourtImage = async (req, res) => {
   }
 };
 
-// ✅ Admin: Get all courts (including pending approval)
+//  Admin: Get all courts (including pending approval)
 export const getAllCourtsForApproval = async (req, res) => {
   try {
     const courts = await Court.find().populate('owner', 'name email');
@@ -102,7 +127,7 @@ export const getAllCourtsForApproval = async (req, res) => {
   }
 };
 
-// ✅ Admin: Approve a court
+// Admin: Approve a court
 export const approveCourt = async (req, res) => {
   try {
     const court = await Court.findById(req.params.id);
@@ -117,7 +142,7 @@ export const approveCourt = async (req, res) => {
   }
 };
 
-// ✅ Admin: Reject a court
+//  Admin: Reject a court
 export const rejectCourt = async (req, res) => {
   try {
     const court = await Court.findById(req.params.id);

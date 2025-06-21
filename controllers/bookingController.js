@@ -37,8 +37,22 @@ export const bookSlot = async (req, res) => {
     const court = await Court.findById(courtId);
     if (!court) return res.status(404).json({ message: "Court not found" });
 
+    // **Check if court is approved**
+    if (!court.approved) {  // or court.status !== 'approved'
+      return res.status(403).json({ message: "Booking is not allowed for unapproved courts." });
+    }
+
     const slots = court.availableTimes.get(date);
-    const slot = slots.find(s => s.start === start && s.end === end);
+
+    if (!slots) {
+      const newSlots = generateTimeSlots();
+      court.availableTimes.set(date, newSlots);
+      court.markModified("availableTimes");
+      await court.save();
+    }
+
+    const currentSlots = court.availableTimes.get(date);
+    const slot = currentSlots.find(s => s.start === start && s.end === end);
 
     if (!slot || slot.status !== "available") {
       return res.status(400).json({ message: "This time slot is already booked or unavailable." });
@@ -61,10 +75,12 @@ export const bookSlot = async (req, res) => {
 
     await booking.save();
     res.status(201).json({ message: "Slot booked successfully", booking });
+
   } catch (err) {
     res.status(500).json({ message: "Booking failed", error: err.message });
   }
 };
+
 
 // Cancel a booking
 export const cancelBooking = async (req, res) => {

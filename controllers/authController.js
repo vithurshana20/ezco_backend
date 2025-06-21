@@ -1,5 +1,7 @@
-import User from '../models/User.js';
+import User from '../models/Court.js';
 import jwt from 'jsonwebtoken';
+// import crypto from "crypto";
+// import { sendEmail } from "../utils/sendEmail.js";
 
 // JWT Token generator function
 const generateToken = (id) => {
@@ -8,10 +10,34 @@ const generateToken = (id) => {
   });
 };
 
-// ✅ Register User Controller (NO TOKEN RETURN)
-export const registerUser = async (req, res) => {
+//  Register User Controller 
+// export const registerUser = async (req, res) => {
+//   try {
+//     const { name, email, phone, password, role } = req.body;
+
+//     if (!name || !email || !phone || !password) {
+//       return res.status(400).json({ message: "Name, email, phone, and password are required" });
+//     }
+
+//     const userExists = await User.findOne({ email });
+//     if (userExists) {
+//       return res.status(400).json({ message: 'User already exists' });
+//     }
+
+//     await User.create({ name, email, phone, password, role ,  trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
+
+//     res.status(201).json({
+//       message: "Registered successfully."
+//     });
+//   } catch (error) {
+//     console.error("Register Error:", error);
+//     res.status(500).json({ message: "Server Error" });
+//   }
+// };
+
+export const registerPlayer = async (req, res) => {
   try {
-    const { name, email, phone, password, role } = req.body;
+    const { name, email, phone, password } = req.body;
 
     if (!name || !email || !phone || !password) {
       return res.status(400).json({ message: "Name, email, phone, and password are required" });
@@ -19,21 +45,63 @@ export const registerUser = async (req, res) => {
 
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ message: "Player already exists" });
     }
 
-    await User.create({ name, email, phone, password, role });
-
-    res.status(201).json({
-      message: "Registered successfully. Please login to continue."
+    const player = await User.create({
+      name,
+      email,
+      phone,
+      password,
+      role: "player",
+      trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
-  } catch (error) {
-    console.error("Register Error:", error);
+
+    res.status(201).json({ message: "Player registered successfully." });
+  } catch (err) {
+    console.error("Player Register Error:", err);
     res.status(500).json({ message: "Server Error" });
   }
 };
 
-// ✅ Login User Controller (TOKEN RETURNED HERE)
+
+export const registerOwner = async (req, res) => {
+  try {
+    const { name, email, phone, password } = req.body;
+
+    if (!name || !email || !phone || !password) {
+      return res.status(400).json({ message: "Name, email, phone, and password are required" });
+    }
+
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: "Owner already exists" });
+    }
+
+    const owner = await User.create({
+      name,
+      email,
+      phone,
+      password,
+      role: "court_owner",
+      trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
+
+    res.status(201).json({ message: "Court Owner registered successfully." });
+  } catch (err) {
+    console.error("Owner Register Error:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+
+
+
+
+
+
+
+//  Login User Controller 
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -67,7 +135,7 @@ export const loginUser = async (req, res) => {
   }
 };
 
-// ✅ Get current logged-in user
+//  Get current logged-in user
 export const getCurrentUser = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
@@ -81,7 +149,7 @@ export const getCurrentUser = async (req, res) => {
   }
 };
 
-// ✅ Get all users (Admin only)
+//  Get all users (Admin only)
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find().select('-password');
@@ -92,7 +160,7 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-// ✅ Update a user by ID (Admin only)
+//  Update a user by ID (Admin only)
 export const updateUser = async (req, res) => {
   try {
     const { name, email, phone, role } = req.body;
@@ -117,7 +185,7 @@ export const updateUser = async (req, res) => {
   }
 };
 
-// ✅ Delete a user by ID (Admin only)
+//  Delete a user by ID (Admin only)
 export const deleteUser = async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
@@ -141,13 +209,9 @@ export const logoutUser = async (req, res) => {
       sameSite: 'strict',
     });
 
-    // Optional: If refresh tokens are stored in DB, remove it from user record
-    // const user = await User.findById(req.user._id);
-    // user.refreshToken = null;
-    // await user.save();
-
     res.status(200).json({ message: 'Successfully logged out' });
   } catch (err) {
     res.status(500).json({ message: 'Logout failed', error: err.message });
   }
 };
+
